@@ -2,7 +2,7 @@
 
 
 from flask import Flask, render_template, request, redirect,jsonify, url_for, flash
-app = Flask(__name__)
+
 
 from sqlalchemy import create_engine, asc
 from sqlalchemy.orm import sessionmaker
@@ -11,6 +11,9 @@ from database_setup import Base, Restaurant, MenuItem
 #Import for Anti forgery state token
 from flask import session as login_session
 import random, string
+from flask import make_response
+import requests
+import json
 
 
 #Connect to Database and create database session
@@ -20,14 +23,32 @@ Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
+app = Flask(__name__)
+
+
+
 # Create anti-forgery state token
 @app.route('/login')
 def showLogin():
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in xrange(32))
     login_session['state'] = state
-    return "The current session state is %s" % login_session['state']
+    #return "The current session state is %s" % login_session['state']
+    #RENDER THE LOGIN TEMPLATE
+    return render_template('login.html')
 
+
+# Add Facebook login
+@app.route('/fbconnect',methods=['POST'])
+def fbconnect():
+    if request.args.get('state') != login_session['state']:
+        response = make_response(json.dumps('Invalid state parameter.'),401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    access_token = request.data
+    print "access token received %s " % access_token
+
+   
 
 #JSON APIs to view Restaurant Information
 @app.route('/restaurant/<int:restaurant_id>/menu/JSON')
